@@ -178,7 +178,13 @@ class DaikinBRP069(Appliance):
         if self.support_fan_rate:
             params.update({"f_rate": self.values['f_rate']})
         if self.support_swing_mode:
-            params.update({"f_dir": self.values['f_dir']})
+            if('f_dir_lr' in self.values and 'f_dir_ud' in self.values):
+                # Australian Alira X uses 2 separate parameters instead of the combined f_dir
+                f_dir_ud = 'S' if self.values['f_dir'] in ('1', '3') else '0'
+                f_dir_lr = 'S' if self.values['f_dir'] in ('2', '3') else '0'
+                query_c += '&f_dir_ud=%s&f_dir_lr=%s' % (f_dir_ud, f_dir_lr)
+            else:
+                query_c += '&f_dir=%s' % self.values['f_dir']
 
         _LOGGER.debug("Sending request to %s with params: %s", path, params)
         await self._get_resource(path, params)

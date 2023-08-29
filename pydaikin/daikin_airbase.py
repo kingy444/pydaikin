@@ -55,16 +55,6 @@ class DaikinAirBase(DaikinBRP069):
         if response.get("f_auto") == "1":
             response["f_rate"] = f'{response["f_rate"]}a'
 
-        # Translate swing mode from 2 parameters to 1
-        if response.get("f_dir_ud") == "0" and response.get("f_dir_lr") == "0":
-            response["f_dir"] = '0'
-        if response.get("f_dir_ud") == "S" and response.get("f_dir_lr") == "0":
-            response["f_dir"] = '1'
-        if response.get("f_dir_ud") == "0" and response.get("f_dir_lr") == "S":
-            response["f_dir"] = '2'
-        if response.get("f_dir_ud") == "S" and response.get("f_dir_lr") == "S":
-            response["f_dir"] = '3'
-
         return response
 
     def __init__(
@@ -94,7 +84,7 @@ class DaikinAirBase(DaikinBRP069):
     @property
     def support_swing_mode(self):
         """Return True if the device support setting swing_mode."""
-        return 'f_dir_ud' in self.values and 'f_dir_lr' in self.values
+        return False
 
     @property
     def support_outside_temperature(self):
@@ -153,22 +143,15 @@ class DaikinAirBase(DaikinBRP069):
         await self._update_settings(settings)
 
         self.values.setdefault("f_airside", 0)
+        query_c = (
+            "aircon/set_control_info"
+            "?pow={pow}&mode={mode}&stemp={stemp}&shum={shum}"
+            "&f_rate={f_rate[0]}&f_auto={f_auto}&f_dir={f_dir}"
+            "&lpw=&f_airside={f_airside}"
+        ).format(**self.values)
 
-        path = "aircon/set_control_info"
-        params = {
-            "f_airside": self.values["f_airside"],
-            "f_auto": self.values["f_auto"],
-            "f_dir": self.values["f_dir"],
-            "f_rate": self.values["f_rate"][0],
-            "lpw": "",
-            "mode": self.values["mode"],
-            "pow": self.values["pow"],
-            "shum": self.values["shum"],
-            "stemp": self.values["stemp"],
-        }
-
-        _LOGGER.debug("Sending request to %s with params: %s", path, params)
-        await self._get_resource(path, params)
+        _LOGGER.debug("Sending query_c: %s", query_c)
+        await self._get_resource(query_c)
 
     def represent(self, key):
         """Return translated value from key."""
